@@ -122,13 +122,10 @@ function toggleAdminLock() {
 
 function updateAdminUI() {
   const adminCard = document.getElementById('admin-panel-card');
-  const navTabs = document.getElementById('nav-tabs');
   
   if (isAdmin) {
-    if (navTabs) navTabs.style.display = 'flex';
     if (adminCard) adminCard.style.display = 'block';
   } else {
-    if (navTabs) navTabs.style.display = 'none';
     if (adminCard) adminCard.style.display = 'none';
   }
 }
@@ -405,6 +402,98 @@ function exportCSV() {
   a.click();
   URL.revokeObjectURL(url);
   showToast('📥 CSV exportado', '#10b981');
+}
+
+// ─── IMPORT TXT / CSV ──────────────────────────────────────────
+function handleImportFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const text = e.target.result;
+    const lines = text.split(/\r?\n/);
+    let count = 0;
+    
+    lines.forEach(line => {
+      if (!line.trim()) return;
+      
+      // Try splitting by comma, semicolon, pipe, or tab
+      let parts = [];
+      if (line.includes('\t')) {
+        parts = line.split('\t');
+      } else if (line.includes(';')) {
+        parts = line.split(';');
+      } else if (line.includes('|')) {
+        parts = line.split('|');
+      } else {
+        // parse comma but handle quoted fields (standard CSV)
+        parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+      }
+      
+      // Clean quotes and whitespaces
+      parts = parts.map(p => p.replace(/^["']|["']$/g, '').trim());
+      
+      // Find candidate fields
+      let nombre = '';
+      let telefono = '';
+      let correo = '';
+      let interes = 'Renta';
+      
+      // Check if parts[0] is a number (like a row index)
+      let startIndex = 0;
+      if (parts.length >= 4 && !isNaN(parts[0]) && parts[0] !== '') {
+        startIndex = 1;
+      }
+      
+      const remainingParts = [];
+      parts.slice(startIndex).forEach(part => {
+        if (!part) return;
+        if (part.includes('@')) {
+          correo = part;
+        } else if (/^\+?[\d\s-]{8,20}$/.test(part) && !telefono) {
+          telefono = part;
+        } else if (/^(renta|venta)$/i.test(part)) {
+          interes = part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+        } else {
+          remainingParts.push(part);
+        }
+      });
+      
+      if (remainingParts.length > 0) {
+        nombre = remainingParts[0];
+      } else if (parts[startIndex]) {
+        nombre = parts[startIndex];
+      }
+      
+      if (nombre && nombre.toLowerCase() !== 'nombre') { // skip header row
+        if (!telefono) telefono = 'Sin teléfono';
+        if (!correo) correo = 'sin@correo.com';
+        
+        participants.push({
+          nombre: nombre,
+          telefono: telefono,
+          correo: correo,
+          interes: interes,
+          fecha: Date.now(),
+          isWinner: false
+        });
+        count++;
+      }
+    });
+    
+    if (count > 0) {
+      saveData();
+      updateCountBadge();
+      updateSorteoCount();
+      renderLista();
+      showToast(`📥 Importados ${count} registros`, '#10b981');
+    } else {
+      showToast('⚠️ No se encontraron registros válidos', '#f59e0b');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = ''; // reset file input selection
 }
 
 // ─── CLEAR ALL ───────────────────────────────────────────────
