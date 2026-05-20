@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderLista();
   updateSorteoCount();
   updateAdminUI();
+  initSplashLogin();
 
   // Hidden Kiosk unlocking gesture (Tap logo 5 times)
   const logo = document.querySelector('.company-logo');
@@ -535,4 +536,38 @@ function showToast(msg, color = '#10b981') {
 
 function escHtml(str) {
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── SPLASH LOGIN ──────────────────────────────────────────────
+function initSplashLogin() {
+  const splash = document.getElementById('splash-login');
+  if (!splash) return;
+  
+  if (sessionStorage.getItem('app_unlocked') === 'true') {
+    splash.style.display = 'none';
+  } else {
+    const input = document.getElementById('splash-password');
+    if (input) {
+      input.focus();
+      input.onkeydown = (e) => {
+        if (e.key === 'Enter') verifySplashPassword();
+      };
+    }
+  }
+}
+
+function verifySplashPassword() {
+  const input = document.getElementById('splash-password');
+  const err = document.getElementById('splash-error');
+  
+  if (input.value === 'expo2026' || input.value === ADMIN_PIN) {
+    sessionStorage.setItem('app_unlocked', 'true');
+    const splash = document.getElementById('splash-login');
+    splash.classList.add('hidden');
+    setTimeout(() => { splash.style.display = 'none'; }, 400);
+  } else {
+    err.style.display = 'block';
+    input.value = '';
+    input.focus();
+  }
 }

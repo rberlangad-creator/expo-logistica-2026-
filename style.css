@@ -934,3 +934,64 @@ body {
   color: #a7f3d0;
   border: 1px solid rgba(16, 185, 129, 0.25);
 }
+
+/* =============================================
+   SPLASH LOGIN
+   ============================================= */
+.splash-login {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  transition: opacity 0.4s ease, visibility 0.4s;
+}
+.splash-login.hidden {
+  opacity: 0;
+  visibility: hidden;
+}
+.splash-content {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  padding: 40px 30px;
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+  animation: fadeUp 0.5s ease;
+}
+.splash-logo {
+  max-height: 50px;
+  max-width: 200px;
+  margin-bottom: 20px;
+  filter: invert(1);
+  mix-blend-mode: screen;
+}
+.splash-content h2 {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.splash-content p {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-bottom: 24px;
+}
+#splash-password {
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--bg3);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+#splash-password:focus {
+  border-color: var(--primary);
+}

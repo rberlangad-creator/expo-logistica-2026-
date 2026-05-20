@@ -14,6 +14,18 @@
 </head>
 <body>
 
+  <!-- SPLASH LOGIN SCREEN -->
+  <div id="splash-login" class="splash-login">
+    <div class="splash-content">
+      <img src="logo.png" alt="Truck Commerce" class="splash-logo" />
+      <h2>Acceso al Sistema</h2>
+      <p>Ingresa la contraseña para abrir el programa:</p>
+      <input type="password" id="splash-password" placeholder="Contraseña" />
+      <div id="splash-error" style="color:var(--danger); font-size:13px; margin-top:10px; display:none; font-weight:500;">⚠️ Contraseña incorrecta</div>
+      <button class="btn btn-primary" onclick="verifySplashPassword()" style="margin-top:20px; width:100%">Ingresar</button>
+    </div>
+  </div>
+
   <!-- HEADER -->
   <header class="header">
     <div class="header-glow"></div>
