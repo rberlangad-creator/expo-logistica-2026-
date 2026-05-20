@@ -1,6 +1,5 @@
 /* ============================================================
    EXPO LOGÍSTICA 2026 — APP LOGIC
-   - QR Scanner (ZXing)
    - Lead capture & localStorage
    - Raffle / Sorteo electrónico
    ============================================================ */
@@ -14,8 +13,6 @@ const ADMIN_PIN    = '2026';
 
 let participants   = [];
 let lastWinner     = null;
-let scannerActive  = false;
-let codeReader     = null;
 let rollInterval   = null;
 let isAdmin        = false;
 let pendingTab     = null;
@@ -27,8 +24,22 @@ document.addEventListener('DOMContentLoaded', () => {
   renderLista();
   updateSorteoCount();
   updateAdminUI();
-  // allow QR placeholder click
-  document.getElementById('qr-placeholder').addEventListener('click', startScanner);
+
+  // Hidden Kiosk unlocking gesture (Tap logo 5 times)
+  const logo = document.querySelector('.company-logo');
+  let logoClicks = 0;
+  let logoTimer = null;
+  if (logo) {
+    logo.addEventListener('click', () => {
+      logoClicks++;
+      clearTimeout(logoTimer);
+      logoTimer = setTimeout(() => { logoClicks = 0; }, 2000); // reset if no clicks for 2 seconds
+      if (logoClicks >= 5) {
+        logoClicks = 0;
+        openPinModal();
+      }
+    });
+  }
 });
 
 // ─── TABS ────────────────────────────────────────────────────
@@ -42,10 +53,12 @@ function switchTab(tab) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
 
-  document.getElementById('tab-' + tab).classList.add('active');
-  document.getElementById('section-' + tab).classList.add('active');
+  const btn = document.getElementById('tab-' + tab);
+  if (btn) btn.classList.add('active');
+  
+  const sec = document.getElementById('section-' + tab);
+  if (sec) sec.classList.add('active');
 
-  if (tab !== 'registro' && scannerActive) stopScanner();
   if (tab === 'sorteo') updateSorteoCount();
   if (tab === 'lista') renderLista();
 }
@@ -108,18 +121,15 @@ function toggleAdminLock() {
 }
 
 function updateAdminUI() {
-  const btn = document.getElementById('admin-lock-btn');
-  const icon = document.getElementById('lock-icon');
-  const label = document.getElementById('lock-label');
+  const adminCard = document.getElementById('admin-panel-card');
+  const navTabs = document.getElementById('nav-tabs');
   
   if (isAdmin) {
-    btn.classList.add('admin-unlocked');
-    label.textContent = 'Desbloqueado';
-    icon.innerHTML = `<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>`;
+    if (navTabs) navTabs.style.display = 'flex';
+    if (adminCard) adminCard.style.display = 'block';
   } else {
-    btn.classList.remove('admin-unlocked');
-    label.textContent = 'Bloqueado';
-    icon.innerHTML = `<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>`;
+    if (navTabs) navTabs.style.display = 'none';
+    if (adminCard) adminCard.style.display = 'none';
   }
 }
 
@@ -144,6 +154,10 @@ function submitLead(e) {
   const nombre   = document.getElementById('nombre').value.trim();
   const telefono = document.getElementById('telefono').value.trim();
   const correo   = document.getElementById('correo').value.trim();
+  
+  // Get active radio for interest
+  const interesActive = document.querySelector('input[name="interes"]:checked');
+  const interes = interesActive ? interesActive.value : 'Renta';
 
   if (!nombre || !telefono || !correo) return;
 
@@ -161,6 +175,7 @@ function submitLead(e) {
     nombre,
     telefono,
     correo,
+    interes,
     fecha:     new Date().toISOString(),
     isWinner:  false,
   };
@@ -171,6 +186,9 @@ function submitLead(e) {
   updateSorteoCount();
 
   document.getElementById('lead-form').reset();
+  
+  // Restore default radio state to Renta
+  document.querySelector('input[name="interes"][value="Renta"]').checked = true;
 
   showToast(`✅ ${nombre} registrado!`, '#10b981');
   flashCard();
@@ -180,192 +198,6 @@ function flashCard() {
   const btn = document.getElementById('btn-registrar');
   btn.style.background = 'linear-gradient(135deg, #10b981, #34d399)';
   setTimeout(() => { btn.style.background = ''; }, 700);
-}
-
-// ─── QR SCANNER ──────────────────────────────────────────────
-async function startScanner() {
-  if (scannerActive) return;
-
-  const placeholder = document.getElementById('qr-placeholder');
-  const video       = document.getElementById('qr-video');
-  const overlay     = document.getElementById('qr-overlay');
-  const stopBtn     = document.getElementById('qr-stop-btn');
-  const btnScan     = document.getElementById('btn-scan');
-  const status      = document.getElementById('qr-status');
-
-  // Check camera permission / support
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    status.textContent = '❌ Cámara no disponible en este dispositivo/navegador';
-    status.style.color = '#ef4444';
-    return;
-  }
-
-  status.textContent = 'Iniciando cámara…';
-  status.style.color = '#94a3b8';
-
-  try {
-    // First ensure permission
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-    stream.getTracks().forEach(t => t.stop()); // stop preview stream, ZXing will open its own
-
-    codeReader = new ZXing.BrowserMultiFormatReader();
-
-    const devices = await ZXing.BrowserCodeReader.listVideoInputDevices();
-    let deviceId = undefined;
-
-    // prefer rear camera
-    if (devices && devices.length > 0) {
-      const rear = devices.find(d => /back|rear|environment/i.test(d.label));
-      deviceId = rear ? rear.deviceId : devices[devices.length - 1].deviceId;
-    }
-
-    placeholder.style.display = 'none';
-    video.style.display = 'block';
-    overlay.style.display = 'block';
-    stopBtn.style.display = 'flex';
-    btnScan.style.display = 'none';
-    document.querySelector('.qr-card').classList.add('scanning');
-    scannerActive = true;
-
-    status.textContent = '📷 Apunta al código QR…';
-    status.style.color = '#6366f1';
-
-    codeReader.decodeFromVideoDevice(deviceId, video, (result, err) => {
-      if (result) {
-        const text = result.getText();
-        handleQRResult(text);
-      }
-      // suppress NotFoundException spam
-      if (err && !(err instanceof ZXing.NotFoundException)) {
-        console.warn('QR error:', err);
-      }
-    });
-
-  } catch (err) {
-    console.error(err);
-    status.textContent = '❌ No se pudo acceder a la cámara. Verifica permisos.';
-    status.style.color = '#ef4444';
-    placeholder.style.display = 'flex';
-  }
-}
-
-function stopScanner() {
-  if (codeReader) {
-    try { codeReader.reset(); } catch {}
-    codeReader = null;
-  }
-  scannerActive = false;
-
-  const placeholder = document.getElementById('qr-placeholder');
-  const video       = document.getElementById('qr-video');
-  const overlay     = document.getElementById('qr-overlay');
-  const stopBtn     = document.getElementById('qr-stop-btn');
-  const btnScan     = document.getElementById('btn-scan');
-  const status      = document.getElementById('qr-status');
-
-  video.srcObject = null;
-  video.style.display = 'none';
-  overlay.style.display = 'none';
-  stopBtn.style.display = 'none';
-  btnScan.style.display = 'flex';
-  placeholder.style.display = 'flex';
-  document.querySelector('.qr-card').classList.remove('scanning');
-  status.textContent = '';
-}
-
-/**
- * Handles decoded QR text.
- * Supports:
- *  1. vCard / MECARD format
- *  2. JSON  { nombre, telefono, correo }
- *  3. Plain text  "Nombre | Teléfono | Correo"
- *  4. URL with query params  ?nombre=&telefono=&correo=
- */
-function handleQRResult(text) {
-  stopScanner();
-
-  const status = document.getElementById('qr-status');
-  status.textContent = '✅ QR leído — procesando…';
-  status.style.color = '#10b981';
-
-  let nombre = '', telefono = '', correo = '';
-
-  // 1. JSON
-  if (text.startsWith('{')) {
-    try {
-      const obj = JSON.parse(text);
-      nombre   = obj.nombre   || obj.name  || '';
-      telefono = obj.telefono || obj.phone || obj.tel || '';
-      correo   = obj.correo   || obj.email || '';
-    } catch {}
-  }
-
-  // 2. URL query params
-  if (!nombre && text.includes('?')) {
-    try {
-      const url    = new URL(text.startsWith('http') ? text : 'http://x.com/' + text.split('?')[1]);
-      nombre   = url.searchParams.get('nombre')   || url.searchParams.get('name')  || '';
-      telefono = url.searchParams.get('telefono') || url.searchParams.get('phone') || '';
-      correo   = url.searchParams.get('correo')   || url.searchParams.get('email') || '';
-    } catch {}
-  }
-
-  // 3. vCard / MECARD
-  if (!nombre && (text.includes('MECARD') || text.includes('BEGIN:VCARD'))) {
-    const fnMatch    = text.match(/(?:FN:|N:|MECARD:.*?N:)([^\n;]+)/i);
-    const telMatch   = text.match(/TEL[^:]*:([^\n]+)/i);
-    const emailMatch = text.match(/EMAIL[^:]*:([^\n]+)/i);
-    nombre   = fnMatch    ? fnMatch[1].trim()    : '';
-    telefono = telMatch   ? telMatch[1].trim()   : '';
-    correo   = emailMatch ? emailMatch[1].trim() : '';
-  }
-
-  // 4. Pipe-separated plain text  "Nombre | Teléfono | Correo"
-  if (!nombre && text.includes('|')) {
-    const parts = text.split('|').map(s => s.trim());
-    nombre   = parts[0] || '';
-    telefono = parts[1] || '';
-    correo   = parts[2] || '';
-  }
-
-  // 5. Tab-separated
-  if (!nombre && text.includes('\t')) {
-    const parts = text.split('\t').map(s => s.trim());
-    nombre   = parts[0] || '';
-    telefono = parts[1] || '';
-    correo   = parts[2] || '';
-  }
-
-  // 6. Comma-separated
-  if (!nombre && text.includes(',')) {
-    const parts = text.split(',').map(s => s.trim());
-    nombre   = parts[0] || '';
-    telefono = parts[1] || '';
-    correo   = parts[2] || '';
-  }
-
-  // 7. Fallback — put full text in nombre field so user can complete
-  if (!nombre) {
-    nombre = text;
-  }
-
-  // Fill form fields
-  document.getElementById('nombre').value   = nombre;
-  document.getElementById('telefono').value = telefono;
-  document.getElementById('correo').value   = correo;
-
-  // Auto-focus the first empty field
-  if (!nombre)   document.getElementById('nombre').focus();
-  else if (!telefono) document.getElementById('telefono').focus();
-  else if (!correo)   document.getElementById('correo').focus();
-  else            document.getElementById('btn-registrar').focus();
-
-  // If all fields complete, auto-submit
-  if (nombre && telefono && correo) {
-    submitLead(null);
-  } else {
-    showToast('📋 Completa los datos y confirma', '#6366f1');
-  }
 }
 
 // ─── SORTEO / RAFFLE ─────────────────────────────────────────
@@ -526,6 +358,8 @@ function renderLista() {
   container.innerHTML = filtered.map((p, i) => {
     const initials = p.nombre.split(' ').slice(0,2).map(w => w[0]).join('').toUpperCase();
     const num      = participants.indexOf(p) + 1;
+    const interesVal = p.interes || 'Renta';
+    const badgeClass = interesVal.toLowerCase() === 'venta' ? 'badge-venta' : 'badge-renta';
     return `
       <div class="participant-card ${p.isWinner ? 'winner-highlight' : ''}">
         ${p.isWinner ? '<div class="winner-badge">🏆 GANADOR</div>' : ''}
@@ -536,6 +370,7 @@ function renderLista() {
             <span>📞 ${escHtml(p.telefono)}</span>
             <span>✉️ ${escHtml(p.correo)}</span>
           </div>
+          <div class="badge-interes ${badgeClass}">${interesVal}</div>
         </div>
         <div class="participant-num">#${num}</div>
       </div>`;
@@ -549,12 +384,13 @@ function exportCSV() {
     return;
   }
 
-  const header = ['#', 'Nombre', 'Teléfono', 'Correo', 'Fecha', 'Ganador'];
+  const header = ['#', 'Nombre', 'Teléfono', 'Correo', 'Interés', 'Fecha', 'Ganador'];
   const rows   = participants.map((p, i) => [
     i + 1,
     '"' + p.nombre.replace(/"/g, '""') + '"',
     p.telefono,
     p.correo,
+    p.interes || 'Renta',
     new Date(p.fecha).toLocaleString('es-MX'),
     p.isWinner ? 'SÍ' : 'NO',
   ]);
