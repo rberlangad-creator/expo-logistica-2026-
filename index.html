@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Expo Proveedores de Logística y Transporte 2026</title>
+  <meta name="description" content="Captura de leads y sorteo electrónico para Expo Proveedores de Logística y Transporte 2026" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <!-- ZXing para lectura de QR local -->
+  <script src="zxing.min.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-glow"></div>
+    <div class="header-content">
+      <div class="company-logo-container">
+        <img src="logo.png" alt="Truck Commerce" class="company-logo" />
+      </div>
+      <div class="expo-badge">EXPO 2026</div>
+      <h1 class="header-title">Proveedores de<br><span class="highlight">Logística &amp; Transporte</span></h1>
+      <p class="header-sub">Registro de Participantes &amp; Sorteo</p>
+    </div>
+    <div class="header-particles">
+      <span></span><span></span><span></span><span></span><span></span>
+    </div>
+  </header>
+
+  <!-- NAV TABS -->
+  <nav class="nav-tabs">
+    <button class="tab-btn active" id="tab-registro" onclick="switchTab('registro')">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Registro
+    </button>
+    <button class="tab-btn" id="tab-sorteo" onclick="switchTab('sorteo')">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      Sorteo
+    </button>
+    <button class="tab-btn" id="tab-lista" onclick="switchTab('lista')">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      Participantes <span class="count-badge" id="count-badge">0</span>
+    </button>
+    <button class="tab-btn admin-lock-btn" id="admin-lock-btn" onclick="toggleAdminLock()">
+      <svg id="lock-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <span id="lock-label">Bloqueado</span>
+    </button>
+  </nav>
+
+  <!-- SECCIÓN: REGISTRO -->
+  <section class="section active" id="section-registro">
+    
+    <!-- QR Scanner -->
+    <div class="card qr-card">
+      <div class="card-header">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="5" y="5" width="3" height="3"/><rect x="16" y="5" width="3" height="3"/><rect x="16" y="16" width="3" height="3"/><rect x="5" y="16" width="3" height="3"/></svg>
+        <span>Escanear Código QR</span>
+      </div>
+
+      <div class="qr-viewer" id="qr-viewer">
+        <div class="qr-placeholder" id="qr-placeholder">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="5" y="5" width="3" height="3"/><rect x="16" y="5" width="3" height="3"/><rect x="16" y="16" width="3" height="3"/><rect x="5" y="16" width="3" height="3"/></svg>
+          <p>Toca para activar la cámara</p>
+        </div>
+        <video id="qr-video" autoplay playsinline></video>
+        <div class="qr-overlay" id="qr-overlay">
+          <div class="scan-line"></div>
+          <div class="corner tl"></div>
+          <div class="corner tr"></div>
+          <div class="corner bl"></div>
+          <div class="corner br"></div>
+        </div>
+        <button class="qr-stop-btn" id="qr-stop-btn" onclick="stopScanner()" style="display:none">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+          Detener
+        </button>
+      </div>
+
+      <button class="btn btn-qr" id="btn-scan" onclick="startScanner()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Activar Cámara QR
+      </button>
+
+      <div class="qr-status" id="qr-status"></div>
+    </div>
+
+    <!-- Formulario Manual -->
+    <div class="card form-card">
+      <div class="card-header">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        <span>Captura Manual</span>
+      </div>
+
+      <form id="lead-form" onsubmit="submitLead(event)">
+        <div class="form-group">
+          <label for="nombre">Nombre Completo</label>
+          <div class="input-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <input type="text" id="nombre" name="nombre" placeholder="Ej. Juan Pérez García" required autocomplete="name" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="telefono">Número de Teléfono</label>
+          <div class="input-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.65 3.33 2 2 0 0 1 3.62 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.6a16 16 0 0 0 6 6l.96-.87a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            <input type="tel" id="telefono" name="telefono" placeholder="Ej. 81 1234 5678" required autocomplete="tel" inputmode="tel" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="correo">Correo Electrónico</label>
+          <div class="input-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            <input type="email" id="correo" name="correo" placeholder="Ej. juan@empresa.com" required autocomplete="email" inputmode="email" />
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="btn-registrar">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Registrar Participante
+        </button>
+      </form>
+    </div>
+
+    <!-- Toast de éxito -->
+    <div class="toast" id="toast">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      <span id="toast-msg">¡Participante registrado!</span>
+    </div>
+
+  </section>
+
+  <!-- SECCIÓN: SORTEO -->
+  <section class="section" id="section-sorteo">
+    <div class="sorteo-container">
+      
+      <div class="sorteo-header">
+        <div class="trophy-icon">🏆</div>
+        <h2>Sorteo Electrónico</h2>
+        <p class="sorteo-sub">Participantes registrados: <strong id="sorteo-count">0</strong></p>
+      </div>
+
+      <!-- Ruleta / Display ganador -->
+      <div class="drum-display">
+        <div class="drum-ring"></div>
+        <div class="drum-inner">
+          <div class="rolling-names" id="rolling-names">
+            <div class="roll-item roll-idle">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <span>Presiona para sortear</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Winner Card -->
+      <div class="winner-card" id="winner-card" style="display:none">
+        <div class="winner-confetti">🎉</div>
+        <div class="winner-label">¡GANADOR!</div>
+        <div class="winner-name" id="winner-name"></div>
+        <div class="winner-details">
+          <span id="winner-phone">📞 —</span>
+          <span id="winner-email">✉️ —</span>
+        </div>
+        <button class="btn btn-secondary" onclick="resetSorteo()">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+          Nuevo Sorteo
+        </button>
+      </div>
+
+      <!-- Botón Sortear -->
+      <button class="btn btn-sorteo" id="btn-sorteo" onclick="iniciarSorteo()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        ¡Realizar Sorteo!
+      </button>
+
+      <p class="sorteo-note" id="sorteo-note">Todos los participantes registrados entran automáticamente.</p>
+
+    </div>
+  </section>
+
+  <!-- SECCIÓN: LISTA -->
+  <section class="section" id="section-lista">
+    <div class="lista-header">
+      <h2>Participantes Registrados</h2>
+      <div class="lista-actions">
+        <button class="btn-icon" id="btn-export" onclick="exportCSV()" title="Exportar CSV">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Exportar
+        </button>
+        <button class="btn-icon btn-danger" onclick="confirmClear()" title="Limpiar lista">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          Limpiar
+        </button>
+      </div>
+    </div>
+
+    <div class="search-wrapper">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="search" id="search-input" placeholder="Buscar participante..." oninput="renderLista()" />
+    </div>
+
+    <div class="lista-container" id="lista-container">
+      <div class="empty-state">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <p>No hay participantes aún.<br>Registra el primero arriba.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Modal confirmación limpiar -->
+  <div class="modal-overlay" id="modal-clear" onclick="closeClear()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-icon">⚠️</div>
+      <h3>¿Limpiar lista?</h3>
+      <p>Se eliminarán todos los participantes. Esta acción no se puede deshacer.</p>
+      <div class="modal-btns">
+        <button class="btn btn-secondary" onclick="closeClear()">Cancelar</button>
+        <button class="btn btn-danger" onclick="clearAll()">Eliminar todo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal PIN de Administrador -->
+  <div class="modal-overlay" id="modal-pin" onclick="closePinModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-icon">🔒</div>
+      <h3>Acceso Restringido</h3>
+      <p>Ingresa el PIN de Administrador (ej. 2026):</p>
+      <div class="pin-inputs">
+        <input type="password" id="pin-input" placeholder="••••" maxlength="6" inputmode="numeric" style="width: 100%; text-align: center; letter-spacing: 8px; font-size: 20px; font-weight: 700; padding: 10px; background: var(--bg3); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-sm); color: var(--text); outline: none;" />
+      </div>
+      <div id="pin-error" style="color:var(--danger); font-size:13px; margin-top:10px; display:none; font-weight:500;">⚠️ PIN incorrecto</div>
+      <div class="modal-btns" style="margin-top:20px;">
+        <button class="btn btn-secondary" onclick="closePinModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="verifyPin()">Ingresar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
